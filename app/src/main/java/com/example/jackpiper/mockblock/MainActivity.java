@@ -23,9 +23,9 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        int bearing = drawView.getBearing(150, 150, 570, 570);
-        TextView bearingText = findViewById(R.id.bearingText);
-        bearingText.setText(Integer.toString(bearing));
+//        int bearing = drawView.getBearing(150, 150, 570, 570);
+//        TextView bearingText = findViewById(R.id.bearingText);
+//        bearingText.setText(Integer.toString(bearing));
     }
 
 //    @Override
@@ -99,6 +99,12 @@ public class MainActivity extends AppCompatActivity {
 
         TextView text = (TextView) findViewById(R.id.topCount);
         text.setText(Integer.toString(num));
+    }
+
+    public void refreshDraw(View vew) {
+        DrawView thingView = findViewById(R.id.drawView);
+        thingView.refresh();
+        Log.d("thing","GOH DARN REFRESH");
     }
 
 }
