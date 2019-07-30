@@ -9,6 +9,10 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Random;
 
 import static java.lang.Math.abs;
@@ -17,19 +21,17 @@ import static java.lang.Math.max;
 public class DrawView extends View {
     Paint paint = new Paint();
     Paint paintFull = new Paint();
+    Paint linePaint = new Paint();
 //    Color myWhite = new Color(255, 255, 255); // Color white
     int x = 0;
     int y = 0;
-    int leftNum = 7;
-    int rightNum = 7;
-    int topNum = 7;
+    int leftNum = 12;
+    int rightNum = 12;
+    int topNum = 12;
 
     int fov = 90;
-
-    int posX1 = 150;
-    int posY1 = 150;
-    int posX2 = 570;
-    int posY2 = 570;
+    boolean switchFlipped = false;
+    int distance = 300;
 
     int bestX1 = 0;
     int bestY1 = 0;
@@ -43,6 +45,8 @@ public class DrawView extends View {
         paint.setStyle(Paint.Style.STROKE);
         paintFull.setColor(Color.GRAY);
         paintFull.setStyle(Paint.Style.FILL_AND_STROKE);
+        linePaint.setColor(Color.RED);
+        linePaint.setStyle(Paint.Style.STROKE);
     }
 
     public DrawView(Context context) {
@@ -65,6 +69,18 @@ public class DrawView extends View {
 
         canvas.drawRect(25, 25, 695, 695, paint);
 
+//        Isle begins not at 25, but at 100?
+        canvas.drawLine(100,25,100,100,paint);
+        canvas.drawLine(25,100,100,100,paint);
+
+        canvas.drawLine(25,625,100,625,paint);
+        canvas.drawLine(100,695,100,625,paint);
+
+        canvas.drawLine(625,625,695,625,paint);
+        canvas.drawLine(625,625,625,695,paint);
+
+        canvas.drawLine(625,25,625,100,paint);
+        canvas.drawLine(625,100,695,100,paint);
 
         paintFull.setColor(Color.GRAY);
 
@@ -72,29 +88,13 @@ public class DrawView extends View {
 //        Half length is 335.
 //        Half way is 360.
 
-        int incrementLeft = 670/(leftNum+1);
-        for(int i = 1; i <= leftNum; i++) {
-            double vis = visibility(160,160,560,560, 60,25+(incrementLeft*i),fov);
-            drawBody(canvas, 60,25+(incrementLeft*i), vis);
-        }
-
-        int incrementRight = 670/(rightNum+1);
-        for(int i = 1; i <= rightNum; i++) {
-            double vis = visibility(160,160,560,560, 660,25+(incrementRight*i),fov);
-            drawBody(canvas, 660,25+(incrementRight*i), vis);
-        }
-
-        int incrementTop = 670/(topNum+1);
-        for(int i = 1; i <= topNum; i++) {
-            double vis = visibility(160,160,560,560, 25+(incrementTop*i),60,fov);
-            drawBody(canvas, 25+(incrementTop*i),60, vis);
-        }
+//       Changing the increment value to make an isle between sections of the audience
+        int incrementLeft = 550/(leftNum+1);
+        int incrementRight = 550/(rightNum+1);
+        int incrementTop = 550/(topNum+1);
 
 
-
-
-
-
+        ArrayList<Double> strengthArray = new ArrayList<>();
         if(updateLine) {
             double maxTotal = 0.0;
 
@@ -112,17 +112,16 @@ public class DrawView extends View {
 
                 double bearingRadians = Math.toRadians(i);
 
-                int x1 = 360 + (int) Math.round(300*Math.cos(bearingRadians));
-                int y1 = 360 + (int) Math.round(300*Math.sin(bearingRadians));
-                int x2 = 360 - (int) Math.round(300*Math.cos(bearingRadians));
-                int y2 = 360 - (int) Math.round(300*Math.sin(bearingRadians));
+                int x1 = 360 + (int) Math.round(distance*Math.cos(bearingRadians));
+                int y1 = 360 + (int) Math.round(distance*Math.sin(bearingRadians));
+                int x2 = 360 - (int) Math.round(distance*Math.cos(bearingRadians));
+                int y2 = 360 - (int) Math.round(distance*Math.sin(bearingRadians));
 
                 if(x1<120) x1=120; else if(x1>600)x1=600;
                 if(y1<120) y1=120; else if(y1>600)y1=600;
                 if(x2<120) x2=120; else if(x2>600)x2=600;
                 if(y2<120) y2=120; else if(y2>600)y2=600;
 
-//                canvas.drawLine(x1,y1,x2,y2,paint);
 
                 double total = 0.0;
 
@@ -138,7 +137,7 @@ public class DrawView extends View {
 //                TODO: Why the hell are there so many good seats with such a low fov
                     total += visibility(x1,y1,x2,y2, 25+(incrementTop*n),60,fov);
                 }
-
+                if(switchFlipped) strengthArray.add(total);
 
                 if(total>maxTotal) {
                     maxTotal = total;
@@ -150,88 +149,37 @@ public class DrawView extends View {
             }
 
 
+            if(switchFlipped) {
+                double maxStrength = Collections.max(strengthArray);
+                double minStrength = Collections.min(strengthArray);
+
+                linePaint.setStrokeWidth(3);
+                for(int i=0; i<360;i+=4) {
+//                str will be between 0 and 255
+                    int str = (int) Math.round(((strengthArray.get(i)-minStrength) / (maxStrength-minStrength)) * 255);
+
+
+                    double bearingRadians = Math.toRadians(i);
+
+                    int x1 = 360 + (int) Math.round(distance*Math.cos(bearingRadians));
+                    int y1 = 360 + (int) Math.round(distance*Math.sin(bearingRadians));
+                    int x2 = 360 - (int) Math.round(distance*Math.cos(bearingRadians));
+                    int y2 = 360 - (int) Math.round(distance*Math.sin(bearingRadians));
+
+                    if(x1<120) x1=120; else if(x1>600)x1=600;
+                    if(y1<120) y1=120; else if(y1>600)y1=600;
+                    if(x2<120) x2=120; else if(x2>600)x2=600;
+                    if(y2<120) y2=120; else if(y2>600)y2=600;
+
+
+                    linePaint.setAlpha(str);
+                    canvas.drawLine(x1,y1,x2,y2,linePaint);
+                }
+            }
 
 
 
         }
-
-//        canvas.drawLine(bestX1, bestY1, bestX2, bestY2, paint);
-//
-//        paintFull.setColor(Color.RED);
-//        canvas.drawCircle(bestX1,bestY1,20,paintFull);
-//        paintFull.setColor(Color.GREEN);
-//        canvas.drawCircle(bestX2,bestY2,20,paintFull);
-//
-//        canvas.drawLine(160, 160, 560, 560, paint);
-
-        double bearing = getBearing(160,160,560,560);
-        Log.d("thing","bearing isss: "+bearing+" and in radians: "+Math.toRadians(bearing));
-
-        double bearingRadians = Math.toRadians(bearing);
-
-//        TODO: why is this *400 here? Is it distance? Why is it necessary?
-        int xthing = 160 + (int) Math.round(80*Math.cos(bearingRadians));
-        int ything = 160 + (int) Math.round(80*Math.sin(bearingRadians));
-
-//        canvas.drawLine(160,160,xthing,ything,paint);
-
-
-
-        double angle1 = bearing+(fov/2);
-        double angle2 = bearing-(fov/2);
-
-        double angle1R = Math.toRadians(angle1);
-        double angle2R = Math.toRadians(angle2);
-
-        int distance = 80;
-        int x1 = 160 + (int) Math.round(distance*Math.cos(angle1R));
-        int y1 = 160 + (int) Math.round(distance*Math.sin(angle1R));
-
-        int x2 = 160 + (int) Math.round(distance*Math.cos(angle2R));
-        int y2 = 160 + (int) Math.round(distance*Math.sin(angle2R));
-
-        Log.d("thing","angleR="+angle1R+", angle2R="+angle2R+"    ("+x1+","+y1+")    ("+x2+","+y2+")");
-
-
-        Paint fovPaint = new Paint();
-//        fovPaint.setColor(Color.YELLOW);
-//        fovPaint.setStyle(Paint.Style.STROKE);
-        float r = 180.0f;
-        float g = 172.0f;
-        float b = 0.0f;
-        float a = 1.0f;
-//        fovColour.alpha() = 0.2f;
-        fovPaint.setColor(Color.GRAY);
-        fovPaint.setStyle(Paint.Style.FILL_AND_STROKE);
-
-        Path fovView = new Path();
-        fovView.moveTo(160,160);
-        fovView.lineTo(x1,y1);
-        fovView.lineTo(xthing,ything);
-        fovView.lineTo(x2,y2);
-
-//        canvas.drawPath(fovView,fovPaint);
-
-
-
-//        canvas.drawLine(160,160,x1,y1,fovPaint);
-//        canvas.drawLine(160,160,x2,y2,fovPaint);
-//
-//        canvas.drawLine(x1,y1,xthing,ything,fovPaint);
-//        canvas.drawLine(x2,y2,xthing,ything,fovPaint);
-
-
-//        int startAngle = (int) (180 / Math.PI * Math.atan2(y2 - y1, x2 - x1));
-//        float radius = 80;
-//        final RectF oval = new RectF();
-//        oval.set(x1 - radius, y1 - radius, x1 + radius, y1 + radius);
-//        Log.d("thing","x1 is "+x1+", y1 is "+y1+", x2 is "+x2+", y2 is "+y2);
-//        Path myPath = new Path();
-//        myPath.arcTo(oval, startAngle, fov, true);
-//        canvas.drawPath(myPath, paint);
-
-        Log.d("thing","Bearing is:      "+Double.toString(getBearing(160, 160, 560, 560)));
-
 
 
         canvas.drawLine(bestX1,bestY1,bestX2,bestY2,paint);
@@ -242,10 +190,20 @@ public class DrawView extends View {
 
 
 
+        for(int i = 1; i <= leftNum; i++) {
+            double vis = visibility(bestX1,bestY1,bestX2,bestY2, 60,85+(incrementLeft*i),fov);
+            drawBody(canvas, 60,85+(incrementLeft*i), vis);
+        }
 
+        for(int i = 1; i <= rightNum; i++) {
+            double vis = visibility(bestX1,bestY1,bestX2,bestY2, 660,85+(incrementRight*i),fov);
+            drawBody(canvas, 660,85+(incrementRight*i), vis);
+        }
 
-
-
+        for(int i = 1; i <= topNum; i++) {
+            double vis = visibility(bestX1,bestY1,bestX2,bestY2, 85+(incrementTop*i),60,fov);
+            drawBody(canvas, 85+(incrementTop*i),60, vis);
+        }
 
 
 
@@ -354,7 +312,9 @@ public class DrawView extends View {
 //        HAHA! The way to determine occlusion by near actor is using tan(angle)=O/A where O is radius of actor circle and A is distance between actors
 //        At the moment it's 2 degrees.
 
-
+//        Radius of the actor is actually 20 but I'm expanding it to account for partial occlusion
+        double occAngle = Math.toDegrees(Math.atan(30.0/(distance*2)));
+        Log.d("thing","occAngle is "+occAngle);
 
 
         double bearingMain1 = getBearing(x1,y1,x2,y2);
@@ -370,13 +330,15 @@ public class DrawView extends View {
         double diff1 = bearingMain1-bearingSeat1;
         double diff2 = bearingMain2-bearingSeat2;
 
-        if(Math.abs(diff1) < fov && Math.abs(diff1) > 2) {
+        if(Math.abs(diff1) < fov && Math.abs(diff1) > occAngle) {
             value1 = Math.abs(diff1)/fovDouble;
+//            value1 = 1;
 //            Log.d("thing","YAAAAAAAAAAAY "+Double.toString((bearingMain-bearingSeat1)/45.0));
         }
 
-        if(Math.abs(diff2) < fov && Math.abs(diff2) > 2) {
+        if(Math.abs(diff2) < fov && Math.abs(diff2) > occAngle) {
             value2 = Math.abs(diff2)/fovDouble;
+//            value2 = 1;
         }
 
 //        Log.d("thing","value1 = "+value1);
@@ -385,6 +347,23 @@ public class DrawView extends View {
 
 //        vis is now between 0 and 1
         return vis;
+    }
+
+    public void flipSwitch(boolean b) {
+        if(b) switchFlipped = true;
+        else switchFlipped = false;
+    }
+
+    public void changeLength(int len) {
+
+        distance = len*3;
+        invalidate();
+//        canvas.drawLine(bestX1,bestY1,bestX2,bestY2,paint);
+//        paintFull.setColor(Color.RED);
+//        canvas.drawCircle(bestX1,bestY1,20,paintFull);
+//        paintFull.setColor(Color.GREEN);
+//        canvas.drawCircle(bestX2,bestY2,20,paintFull);
+
     }
 
 }
